@@ -93,13 +93,13 @@ public class Service {
             @Override
             public void write(OutputStream os) throws IOException, WebApplicationException {
                 JsonGenerator jg = objectMapper.getJsonFactory().createJsonGenerator(os, JsonEncoding.UTF8);
-                HashMap<Long, int[]> ageAggregator = new HashMap<>();
+                HashMap<Integer, int[]> ageAggregator = new HashMap<>();
                 try (Transaction tx = db.beginTx()) {
                     final ResourceIterator<Node> nodes = db.findNodes(Labels.PROFILES);
 
                     while(nodes.hasNext()) {
                         Node node = nodes.next();
-                        Long age = ((Number)node.getProperty("AGE", 0L)).longValue();
+                        Integer age = (Integer)node.getProperty("AGE", 0L);
                         int[] count = ageAggregator.get(age);
                         if (count == null) {
                             ageAggregator.put(age, new int[]{1});
@@ -108,7 +108,7 @@ public class Service {
                         }
                     }
                     jg.writeStartArray();
-                    for (Map.Entry<Long, int[]> entry : ageAggregator.entrySet()) {
+                    for (Map.Entry<Integer, int[]> entry : ageAggregator.entrySet()) {
                         jg.writeStartObject();
                         jg.writeObjectField(entry.getKey().toString(), entry.getValue()[0]);
                         jg.writeEndObject();
@@ -130,7 +130,7 @@ public class Service {
             @Override
             public void write(OutputStream os) throws IOException, WebApplicationException {
                 JsonGenerator jg = objectMapper.getJsonFactory().createJsonGenerator(os, JsonEncoding.UTF8);
-                HashMap<Long, int[]> ageAggregator = new HashMap<>();
+                HashMap<Integer, int[]> ageAggregator = new HashMap<>();
                 try (Transaction tx = db.beginTx()) {
                     ThreadToStatementContextBridge ctx = dbapi.getDependencyResolver().resolveDependency(ThreadToStatementContextBridge.class);
                     ReadOperations ops = ctx.get().readOperations();
@@ -140,23 +140,20 @@ public class Service {
 
                     Cursor<NodeItem> nodes = ops.nodeCursorGetForLabel(propertyKey);
                     while(nodes.next()) {
-                        Long age;
                         Object ageProperty = nodes.get().getProperty(propertyAge);
                         if ( ageProperty == null) {
-                            age = 0L;
-                        } else {
-                            age = ((Number)ageProperty).longValue();
+                            ageProperty = 0;
                         }
-                        int[] count = ageAggregator.get(age);
+                        int[] count = ageAggregator.get(ageProperty);
                         if (count == null) {
-                            ageAggregator.put(age, new int[]{1});
+                            ageAggregator.put((Integer)ageProperty, new int[]{1});
                         } else {
                             count[0]++;
                         }
                     }
 
                     jg.writeStartArray();
-                    for (Map.Entry<Long, int[]> entry : ageAggregator.entrySet()) {
+                    for (Map.Entry<Integer, int[]> entry : ageAggregator.entrySet()) {
                         jg.writeStartObject();
                         jg.writeObjectField(entry.getKey().toString(), entry.getValue()[0]);
                         jg.writeEndObject();

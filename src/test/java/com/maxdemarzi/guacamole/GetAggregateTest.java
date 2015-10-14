@@ -2,6 +2,11 @@ package com.maxdemarzi.guacamole;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.neo4j.function.Function;
+import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.test.server.HTTP;
 
@@ -16,8 +21,27 @@ public class GetAggregateTest {
 
     @Rule
     public Neo4jRule neo4j = new Neo4jRule()
-            .withFixture( CYPHER_STATEMENT )
+            .withFixture(new Function<GraphDatabaseService, Void>() {
+                @Override
+                public Void apply(GraphDatabaseService db) throws RuntimeException {
+                    try (Transaction tx = db.beginTx()) {
+                        Node one = createUser(db, "u1", "Max", 36);
+                        Node two = createUser(db, "u2", "James", 36);
+                        Node three = createUser(db, "u3", "Tim", 37);
+                        tx.success();
+                    }
+                    return null;
+                }
+            })
             .withExtension("/v1", Service.class);
+
+    private Node createUser(GraphDatabaseService db, String key, String name, Integer age) {
+        Node one = db.createNode(DynamicLabel.label("PROFILES"));
+        one.setProperty("_key", key);
+        one.setProperty("name", name);
+        one.setProperty("AGE", age);
+        return one;
+    }
 
     @Test
     public void shouldGetAggregate() throws IOException {
@@ -40,13 +64,6 @@ public class GetAggregateTest {
 
         assertTrue(actualSet.equals(expectedSet));
     }
-
-    private static final String CYPHER_STATEMENT =
-            new StringBuilder()
-                    .append("CREATE (:PROFILES {_key:'u1', name:'Max', AGE:36}) ")
-                    .append("CREATE (:PROFILES {_key:'u2', name:'James', AGE:36}) ")
-                    .append("CREATE (:PROFILES {_key:'u3', name:'Tim', AGE:37}) ")
-                    .toString();
 
     private static final ArrayList expected = new ArrayList() {{
         add(new HashMap<String, Object>() {{
