@@ -3,7 +3,12 @@ package com.maxdemarzi.guacamole;
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.*;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.api.ReadOperations;
+import org.neo4j.kernel.api.cursor.NodeItem;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 import javax.ws.rs.GET;
@@ -22,6 +27,11 @@ import java.util.Map;
 @Path("/service")
 public class Service {
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final GraphDatabaseAPI dbapi;
+
+    public Service(@Context GraphDatabaseService db) {
+        dbapi = (GraphDatabaseAPI)db;
+    }
 
     @GET
     @Path("/warmup")
@@ -97,6 +107,54 @@ public class Service {
                             count[0]++;
                         }
                     }
+                    jg.writeStartArray();
+                    for (Map.Entry<Long, int[]> entry : ageAggregator.entrySet()) {
+                        jg.writeStartObject();
+                        jg.writeObjectField(entry.getKey().toString(), entry.getValue()[0]);
+                        jg.writeEndObject();
+                    }
+                    jg.writeEndArray();
+                }
+                jg.flush();
+                jg.close();
+            }
+        };
+
+        return Response.ok().entity(stream).type(MediaType.APPLICATION_JSON).build();
+    }
+
+    @GET
+    @Path("/aggregate2")
+    public Response getAggregate2(@Context GraphDatabaseService db)  {
+        StreamingOutput stream = new StreamingOutput() {
+            @Override
+            public void write(OutputStream os) throws IOException, WebApplicationException {
+                JsonGenerator jg = objectMapper.getJsonFactory().createJsonGenerator(os, JsonEncoding.UTF8);
+                HashMap<Long, int[]> ageAggregator = new HashMap<>();
+                try (Transaction tx = db.beginTx()) {
+                    ThreadToStatementContextBridge ctx = dbapi.getDependencyResolver().resolveDependency(ThreadToStatementContextBridge.class);
+                    ReadOperations ops = ctx.get().readOperations();
+                    int labelId = ops.labelGetForName(Labels.PROFILES.name());
+                    int propertyKey = ops.propertyKeyGetForName("_key");
+                    int propertyAge = ops.propertyKeyGetForName("AGE");
+
+                    Cursor<NodeItem> nodes = ops.nodeCursorGetForLabel(propertyKey);
+                    while(nodes.next()) {
+                        Long age;
+                        Object ageProperty = nodes.get().getProperty(propertyAge);
+                        if ( ageProperty == null) {
+                            age = 0L;
+                        } else {
+                            age = ((Number)ageProperty).longValue();
+                        }
+                        int[] count = ageAggregator.get(age);
+                        if (count == null) {
+                            ageAggregator.put(age, new int[]{1});
+                        } else {
+                            count[0]++;
+                        }
+                    }
+
                     jg.writeStartArray();
                     for (Map.Entry<Long, int[]> entry : ageAggregator.entrySet()) {
                         jg.writeStartObject();

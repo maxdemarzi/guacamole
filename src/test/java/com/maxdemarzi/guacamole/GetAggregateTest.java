@@ -30,6 +30,17 @@ public class GetAggregateTest {
         assertTrue(actualSet.equals(expectedSet));
     }
 
+    @Test
+    public void shouldGetAggregate2() throws IOException {
+        HTTP.Response response = HTTP.GET(neo4j.httpURI().resolve("/v1/service/aggregate2").toString());
+        ArrayList actual = response.content();
+        System.out.println(actual);
+        HashSet expectedSet = new HashSet<>(expected);
+        HashSet actualSet = new HashSet<>(actual);
+
+        assertTrue(actualSet.equals(expectedSet));
+    }
+
     private static final String CYPHER_STATEMENT =
             new StringBuilder()
                     .append("CREATE (:PROFILES {_key:'u1', name:'Max', AGE:36}) ")
