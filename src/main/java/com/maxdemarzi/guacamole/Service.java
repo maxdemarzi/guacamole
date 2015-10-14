@@ -89,7 +89,7 @@ public class Service {
 
                     while(nodes.hasNext()) {
                         Node node = nodes.next();
-                        Long age = (Long)node.getProperty("AGE", 0);
+                        Long age = ((Number)node.getProperty("AGE", 0L)).longValue();
                         int[] count = ageAggregator.get(age);
                         if (count == null) {
                             ageAggregator.put(age, new int[]{1});
