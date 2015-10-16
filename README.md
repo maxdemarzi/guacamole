@@ -27,5 +27,8 @@ Example Neo4j Extension Testing
         :GET /v1/service/document/u1
         :GET /v1/service/aggregate
         :GET /v1/service/aggregate2
+        :GET /v1/service/shortest_path/u1/u2
+        :GET /v1/service/neighbors/u1
+        :GET /v1/service/neighbors2/u1
 
 7. Test it.

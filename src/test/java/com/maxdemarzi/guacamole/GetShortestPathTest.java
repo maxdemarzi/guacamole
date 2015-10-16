@@ -22,7 +22,6 @@ public class GetShortestPathTest {
     public void shouldGetShortestPath() throws IOException {
         HTTP.Response response = HTTP.GET(neo4j.httpURI().resolve("/v1/service/shortest_path/u1/u2").toString());
         HashMap actual = response.content();
-        System.out.println(actual);
         assertTrue(actual.equals(expected));
     }
 

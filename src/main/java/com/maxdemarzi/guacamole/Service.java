@@ -23,9 +23,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 @Path("/service")
 public class Service {
@@ -96,6 +94,75 @@ public class Service {
         return Response.ok().entity(stream).type(MediaType.APPLICATION_JSON).build();
     }
 
+
+    @GET
+    @Path("/neighbors/{key}")
+    public Response getNeighbors(@PathParam("key") String key, @Context GraphDatabaseService db) {
+        StreamingOutput stream = new StreamingOutput() {
+            @Override
+            public void write(OutputStream os) throws IOException, WebApplicationException {
+                JsonGenerator jg = objectMapper.getJsonFactory().createJsonGenerator(os, JsonEncoding.UTF8);
+
+                try (Transaction tx = db.beginTx()) {
+                    final Node user = db.findNode(Labels.PROFILES, "_key", key);
+                    jg.writeStartArray();
+                    for (Relationship r : user.getRelationships(Direction.OUTGOING)) {
+                        Node neighbor = r.getEndNode();
+                        jg.writeStartObject();
+                        jg.writeStringField("_key", (String)neighbor.getProperty("_key"));
+                        jg.writeEndObject();
+
+                    }
+                    jg.writeEndArray();
+                }
+                jg.flush();
+                jg.close();
+            }
+        };
+
+        return Response.ok().entity(stream).type(MediaType.APPLICATION_JSON).build();
+    }
+
+    @GET
+    @Path("/neighbors2/{key}")
+    public Response getNeighbors2(@PathParam("key") String key, @Context GraphDatabaseService db) {
+        StreamingOutput stream = new StreamingOutput() {
+            @Override
+            public void write(OutputStream os) throws IOException, WebApplicationException {
+                JsonGenerator jg = objectMapper.getJsonFactory().createJsonGenerator(os, JsonEncoding.UTF8);
+
+                try (Transaction tx = db.beginTx()) {
+                    final Node user = db.findNode(Labels.PROFILES, "_key", key);
+                    Set neighbors = new HashSet<String>();
+                    jg.writeStartArray();
+                    for (Relationship r : user.getRelationships(Direction.OUTGOING)) {
+                        Node neighbor = r.getEndNode();
+                        String key = (String)neighbor.getProperty("_key");
+                        if (!neighbors.contains(key)) {
+                            jg.writeStartObject();
+                            jg.writeStringField("_key", key);
+                            jg.writeEndObject();
+                        }
+
+                        for (Relationship r2 : neighbor.getRelationships(Direction.OUTGOING)) {
+                            Node neighbor2 = r2.getEndNode();
+                            String key2 = (String)neighbor2.getProperty("_key");
+                            if (!neighbors.contains(key2)) {
+                                jg.writeStartObject();
+                                jg.writeStringField("_key", key2);
+                                jg.writeEndObject();
+                            }
+                        }
+                    }
+                    jg.writeEndArray();
+                }
+                jg.flush();
+                jg.close();
+            }
+        };
+
+        return Response.ok().entity(stream).type(MediaType.APPLICATION_JSON).build();
+    }
     @GET
     @Path("/document/{key}")
     public Response getDocument(@PathParam("key") String key, @Context GraphDatabaseService db) {
