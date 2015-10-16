@@ -4,6 +4,8 @@ import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.cursor.Cursor;
+import org.neo4j.graphalgo.GraphAlgoFactory;
+import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.*;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.api.ReadOperations;
@@ -22,12 +24,15 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 @Path("/service")
 public class Service {
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final GraphDatabaseAPI dbapi;
+    private final PathFinder<org.neo4j.graphdb.Path> finder = GraphAlgoFactory.shortestPath(
+            PathExpanders.allTypesAndDirections(), 15);
 
     public Service(@Context GraphDatabaseService db) {
         dbapi = (GraphDatabaseAPI)db;
@@ -57,6 +62,38 @@ public class Service {
         results.put("count", counter);
 
         return Response.ok().entity(objectMapper.writeValueAsString(results)).build();
+    }
+
+    @GET
+    @Path("/shortest_path/{key1}/{key2}")
+    public Response getShortestPath(@PathParam("key1") String key1,
+                                    @PathParam("key2") String key2,
+                                    @Context GraphDatabaseService db) {
+        StreamingOutput stream = new StreamingOutput() {
+            @Override
+            public void write(OutputStream os) throws IOException, WebApplicationException {
+                JsonGenerator jg = objectMapper.getJsonFactory().createJsonGenerator(os, JsonEncoding.UTF8);
+
+                try (Transaction tx = db.beginTx()) {
+                    final Node node1 = db.findNode(Labels.PROFILES, "_key", key1);
+                    final Node node2 = db.findNode(Labels.PROFILES, "_key", key2);
+                    org.neo4j.graphdb.Path foundPath = finder.findSinglePath(node1, node2);
+                    Iterator<Node> nodes = foundPath.nodes().iterator();
+                    jg.writeStartObject();
+                    jg.writeArrayFieldStart("path");
+                    while (nodes.hasNext()){
+                        Node node = nodes.next();
+                        jg.writeNumber(node.getId());
+                    }
+                    jg.writeEndArray();
+                    jg.writeEndObject();
+                }
+                jg.flush();
+                jg.close();
+            }
+        };
+
+        return Response.ok().entity(stream).type(MediaType.APPLICATION_JSON).build();
     }
 
     @GET
