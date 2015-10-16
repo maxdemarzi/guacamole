@@ -32,11 +32,12 @@ public class GetNeighbors2Test {
                     .append("CREATE (user2:PROFILES {_key:'u2', name:'Tom'}) ")
                     .append("CREATE (user3:PROFILES {_key:'u3', name:'Jim'}) ")
                     .append("CREATE (user1)-[:RELATIONS]->(user2) ")
+                    .append("CREATE (user1)-[:RELATIONS]->(user3) ")
                     .append("CREATE (user2)-[:RELATIONS]->(user3) ")
                     .toString();
 
     private static final ArrayList expected = new ArrayList<HashMap<String, Object>>() {{
-        add(new HashMap<String, Object>() {{ put("_key", "u2"); }});
         add(new HashMap<String, Object>() {{ put("_key", "u3"); }});
+        add(new HashMap<String, Object>() {{ put("_key", "u2"); }});
     }};
 }

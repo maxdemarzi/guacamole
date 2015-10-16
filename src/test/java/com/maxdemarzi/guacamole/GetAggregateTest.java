@@ -47,7 +47,6 @@ public class GetAggregateTest {
     public void shouldGetAggregate() throws IOException {
         HTTP.Response response = HTTP.GET(neo4j.httpURI().resolve("/v1/service/aggregate").toString());
         ArrayList actual = response.content();
-        System.out.println(actual);
         HashSet expectedSet = new HashSet<>(expected);
         HashSet actualSet = new HashSet<>(actual);
 

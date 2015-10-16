@@ -139,6 +139,7 @@ public class Service {
                         Node neighbor = r.getEndNode();
                         String key = (String)neighbor.getProperty("_key");
                         if (!neighbors.contains(key)) {
+                            neighbors.add(key);
                             jg.writeStartObject();
                             jg.writeStringField("_key", key);
                             jg.writeEndObject();
@@ -148,6 +149,7 @@ public class Service {
                             Node neighbor2 = r2.getEndNode();
                             String key2 = (String)neighbor2.getProperty("_key");
                             if (!neighbors.contains(key2)) {
+                                neighbors.add(key2);
                                 jg.writeStartObject();
                                 jg.writeStringField("_key", key2);
                                 jg.writeEndObject();
